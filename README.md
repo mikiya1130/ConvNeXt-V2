@@ -1,3 +1,90 @@
+## 環境構築
+
+- Docker 用に env ファイル作成
+```
+sh .devcontainer/generate_env.sh
+```
+
+- DevContainers を使用してコンテナ環境立ち上げ(環境によるが20分ほどかかる)
+  - `Ctrl+Shift+P`=>`Dev Containers: rebuild and Reopen in Container`
+
+- MinkowskiEngine インストール(こちらも10分ほどかかる)
+```
+git submodule update --init --recursive
+git submodule update --recursive --remote
+cd MinkowskiEngine
+python setup.py install --blas_include_dirs=${CONDA_PREFIX}/include --blas=openblas --force_cuda
+```
+
+- `data` ディレクトリ下に以下の構成でデータを準備
+```
+- data
+  - train
+    - <class1>
+      - *.<png|jpg>
+    - <class2>
+    - <classN>
+  - val
+    - <class1>
+      - *.<png|jpg>
+    - <class2>
+    - <classN>
+  - test
+    - <class1>
+      - *.<png|jpg>
+    - <class2>
+    - <classN>
+```
+
+## GPU1枚1PC用コマンド
+
+- 事前学習
+```
+python main_pretrain.py \
+  --model convnextv2_base \
+  --batch_size 32 --update_freq 8 \
+  --blr 1.5e-4 \
+  --epochs 1600 \
+  --warmup_epochs 40 \
+  --data_path /workspace/data \
+  --output_dir /workspace/checkpoints/pretrain
+```
+
+- ファインチューニング
+```
+python main_finetune.py \
+  --model convnextv2_base \
+  --batch_size 32 --update_freq 4 \
+  --blr 6.25e-4 \
+  --epochs 100 \
+  --warmup_epochs 20 \
+  --layer_decay_type 'group' \
+  --layer_decay 0.6 \
+  --weight_decay 0.05 \
+  --drop_path 0.1 \
+  --reprob 0.25 \
+  --mixup 0.8 \
+  --cutmix 1.0 \
+  --smoothing 0.1 \
+  --model_ema True --model_ema_eval True \
+  --use_amp True \
+  --finetune $(find /workspace/checkpoints/pretrain/*.pth | tail -n1) \
+  --data_path /workspace/data \
+  --output_dir /workspace/checkpoints/finetune
+```
+
+- テスト
+```
+python main_finetune.py \
+  --model convnextv2_base \
+  --eval true \
+  --resume /workspace/checkpoints/finetune/checkpoint-best.pth \
+  --input_size 224 \
+  --data_path /workspace/data
+```
+
+- 追記ここまで
+
 ## ConvNeXt V2<br><sub>Official PyTorch Implementation</sub>
 
 This repo contains the PyTorch version of *8* model definitions (*Atto, Femto, Pico, Nano, Tiny, Base, Large, Huge*), pre-training/fine-tuning code and pre-trained weights (converted from JAX weights trained on TPU) for our ConvNeXt V2 paper.

@@ -485,7 +485,7 @@ def auto_load_model(args, model, model_without_ddp, optimizer, loss_scaler, mode
             args.resume = os.path.join(output_dir, 'checkpoint-%d.pth' % latest_ckpt)
         print("Auto resume checkpoint: %s" % args.resume)
 
-    if args.resume:
+    if not (hasattr(args, 'eval') and args.eval) and args.resume:
         if args.resume.startswith('https'):
             checkpoint = torch.hub.load_state_dict_from_url(
                 args.resume, map_location='cpu', check_hash=True)

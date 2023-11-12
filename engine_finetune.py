@@ -52,6 +52,8 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
             loss = criterion(output, targets)
 
         loss_value = loss.item()
+        if math.isnan(loss_value):
+            loss_value = 1e+10
 
         if not math.isfinite(loss_value):
             print("Loss is {}, stopping training".format(loss_value))
