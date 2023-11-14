@@ -485,7 +485,7 @@ def auto_load_model(args, model, model_without_ddp, optimizer, loss_scaler, mode
             args.resume = os.path.join(output_dir, 'checkpoint-%d.pth' % latest_ckpt)
         print("Auto resume checkpoint: %s" % args.resume)
 
-    if not (hasattr(args, 'eval') and args.eval) and args.resume:
+    if args.resume:
         if args.resume.startswith('https'):
             checkpoint = torch.hub.load_state_dict_from_url(
                 args.resume, map_location='cpu', check_hash=True)
@@ -495,7 +495,8 @@ def auto_load_model(args, model, model_without_ddp, optimizer, loss_scaler, mode
         model_without_ddp.load_state_dict(checkpoint['model'])
         print("Resume checkpoint %s" % args.resume)
         if 'optimizer' in checkpoint and 'epoch' in checkpoint:
-            optimizer.load_state_dict(checkpoint['optimizer'])
+            if not (hasattr(args, 'eval') and args.eval):
+                optimizer.load_state_dict(checkpoint['optimizer'])
             if not isinstance(checkpoint['epoch'], str): # does not support resuming with 'best', 'best-ema'
                 args.start_epoch = checkpoint['epoch'] + 1
             else:
